@@ -1,0 +1,1048 @@
+<!-- index.html — полный фронтенд для Vercel -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Eat or Be Eaten</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        #gameCanvas {
+            display: block;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        #loginScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            z-index: 100;
+        }
+        
+        #loginScreen h1 {
+            color: #e94560;
+            margin-bottom: 10px;
+            font-size: clamp(2em, 8vw, 3.5em);
+            text-shadow: 0 0 30px #e94560;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        .input-group {
+            margin: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 300px;
+        }
+        
+        .input-group label {
+            color: #fff;
+            margin-bottom: 8px;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        #nameInput {
+            padding: 15px 20px;
+            font-size: 1.2em;
+            border: 2px solid #e94560;
+            border-radius: 10px;
+            background: rgba(15, 52, 96, 0.5);
+            color: #fff;
+            outline: none;
+            text-align: center;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        #nameInput:focus {
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        }
+        
+        .color-picker {
+            display: flex;
+            gap: 12px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .color-option {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        .color-option:hover {
+            transform: scale(1.15);
+        }
+        
+        .color-option.selected {
+            border-color: #fff;
+            box-shadow: 0 0 20px rgba(255,255,255,0.6);
+            transform: scale(1.1);
+        }
+        
+        #startBtn {
+            margin-top: 25px;
+            padding: 18px 60px;
+            font-size: 1.3em;
+            background: linear-gradient(45deg, #e94560, #ff6b6b);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+        }
+        
+        #startBtn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(233, 69, 96, 0.6);
+        }
+        
+        #startBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #joystick {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 130px;
+            height: 130px;
+            background: rgba(255,255,255,0.1);
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: none;
+            pointer-events: all;
+            backdrop-filter: blur(10px);
+        }
+        
+        #joystickKnob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #e94560, #c73e54);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.5);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        #eatBtn {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 110px;
+            height: 110px;
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.9), rgba(199, 62, 84, 0.9));
+            border: 3px solid rgba(255,255,255,0.4);
+            border-radius: 50%;
+            display: none;
+            pointer-events: all;
+            font-size: 1.3em;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+            backdrop-filter: blur(10px);
+            transition: transform 0.1s;
+        }
+        
+        #eatBtn:disabled {
+            background: linear-gradient(135deg, #555, #333);
+            border-color: #777;
+            cursor: not-allowed;
+        }
+        
+        #eatBtn.cooldown {
+            background: linear-gradient(135deg, #666, #444);
+        }
+        
+        #eatBtn.windup {
+            animation: pulse 0.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4); }
+            50% { transform: scale(0.95); box-shadow: 0 5px 15px rgba(233, 69, 96, 0.6); }
+        }
+        
+        #respawnScreen, #dangerScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            z-index: 50;
+        }
+        
+        #respawnScreen {
+            background: rgba(0,0,0,0.9);
+        }
+        
+        #dangerScreen {
+            background: rgba(255,0,0,0.3);
+            animation: dangerPulse 0.5s infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes dangerPulse {
+            0%, 100% { background: rgba(255,0,0,0.2); }
+            50% { background: rgba(255,0,0,0.5); }
+        }
+        
+        .danger-text {
+            color: #fff;
+            font-size: 3em;
+            font-weight: bold;
+            text-shadow: 0 0 20px red;
+            animation: shake 0.5s infinite;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        #respawnScreen h2 {
+            color: #e94560;
+            font-size: clamp(2em, 6vw, 3em);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        #respawnTimer {
+            color: #fff;
+            font-size: 2em;
+        }
+        
+        #connectionStatus {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            border-radius: 20px;
+            font-size: 0.8em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff4444;
+        }
+        
+        .status-dot.connected {
+            background: #44ff44;
+            box-shadow: 0 0 10px #44ff44;
+        }
+        
+        #minimap {
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #e94560;
+            border-radius: 10px;
+        }
+        
+        .stats {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 1em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 10px 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stats div {
+            margin: 5px 0;
+        }
+        
+        .cooldown-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: #e94560;
+            transition: width 1s linear;
+        }
+        
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9em;
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+        
+        .touch-device #joystick,
+        .touch-device #eatBtn {
+            display: block;
+        }
+        
+        .touch-device .controls-hint {
+            display: none;
+        }
+        
+        #killFeed {
+            position: absolute;
+            top: 100px;
+            left: 10px;
+            max-width: 250px;
+        }
+        
+        .kill-message {
+            color: #fff;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 0.9em;
+            animation: slideIn 0.3s ease;
+            border-left: 3px solid #e94560;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @media (max-width: 600px) {
+            #joystick {
+                width: 100px;
+                height: 100px;
+                bottom: 30px;
+                left: 30px;
+            }
+            #joystickKnob {
+                width: 40px;
+                height: 40px;
+            }
+            #eatBtn {
+                width: 90px;
+                height: 90px;
+                bottom: 30px;
+                right: 30px;
+                font-size: 1.1em;
+            }
+            #minimap {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div id="loginScreen">
+            <h1>🎮 EAT OR BE EATEN</h1>
+            <div class="subtitle">Мультиплеерная игра на выживание</div>
+            <div class="input-group">
+                <label>Ваше имя</label>
+                <input type="text" id="nameInput" placeholder="Введите имя" maxlength="10" value="Игрок">
+            </div>
+            <div class="input-group">
+                <label>Цвет персонажа</label>
+                <div class="color-picker">
+                    <div class="color-option selected" style="background: #e94560" data-color="#e94560"></div>
+                    <div class="color-option" style="background: #4ecca3" data-color="#4ecca3"></div>
+                    <div class="color-option" style="background: #4d96ff" data-color="#4d96ff"></div>
+                    <div class="color-option" style="background: #ffd93d" data-color="#ffd93d"></div>
+                    <div class="color-option" style="background: #9b59b6" data-color="#9b59b6"></div>
+                    <div class="color-option" style="background: #ff6b9d" data-color="#ff6b9d"></div>
+                </div>
+            </div>
+            <button id="startBtn">ИГРАТЬ</button>
+        </div>
+        
+        <div id="dangerScreen">
+            <div class="danger-text">⚠️ ВАС ПЫТАЮТСЯ СЪЕСТЬ!</div>
+        </div>
+        
+        <div id="respawnScreen">
+            <h2>💀 ВАС СЪЕЛИ!</h2>
+            <div id="respawnTimer">Респавн через: 3</div>
+        </div>
+        
+        <div id="connectionStatus">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Подключение...</span>
+        </div>
+        
+        <div class="stats">
+            <div>👤 <span id="playerName">-</span></div>
+            <div>📏 Размер: <span id="sizeDisplay">100%</span></div>
+            <div>🍽️ Съедено: <span id="eatCount">0</span></div>
+            <div id="cooldownDisplay" style="color: #e94560; display: none;">⏳ Кулдаун: <span id="cooldownTime">0</span>с</div>
+        </div>
+        
+        <div id="killFeed"></div>
+        
+        <canvas id="minimap"></canvas>
+        
+        <div id="joystick">
+            <div id="joystickKnob"></div>
+        </div>
+        <button id="eatBtn">EAT</button>
+        
+        <div class="controls-hint">
+            WASD / Стрелки — движение | Пробел — съесть | E — войти в дом
+        </div>
+    </div>
+
+    <script>
+        // Определяем тач-устройство
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isTouchDevice) {
+            document.body.classList.add('touch-device');
+        }
+
+        // Конфигурация сервера
+        const WS_URL = window.location.hostname === 'localhost' 
+            ? 'ws://localhost:10000' 
+            : 'wss://your-render-url.onrender.com'; // ЗАМЕНИТЕ на ваш URL
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimap = document.getElementById('minimap');
+        const minimapCtx = minimap.getContext('2d');
+        
+        // Состояние игры
+        let ws = null;
+        let myId = null;
+        let gameRunning = false;
+        let players = new Map(); // id -> player data
+        let houses = [];
+        let camera = { x: 0, y: 0 };
+        let keys = {};
+        let joystick = { active: false, dx: 0, dy: 0 };
+        let lastTime = 0;
+        let eatCount = 0;
+        let myRadius = 20;
+        let isDead = false;
+        let inHouse = null;
+        let eatCooldown = 0;
+        let eatWindup = 0;
+        let dangerTimeout = null;
+        
+        // Константы
+        const WORLD_WIDTH = 2000;
+        const WORLD_HEIGHT = 2000;
+        const PLAYER_SPEED = 250;
+        const HOUSE_SIZE = 60;
+        
+        // Цвета
+        const COLORS = {
+            grass: '#1a472a',
+            grassDark: '#143620',
+            house: '#8b4513',
+            houseRoof: '#a0522d',
+            houseDoor: '#4a3728'
+        };
+        
+        // Resize
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        
+        // Ввод
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') startEat();
+            if (e.code === 'KeyE') tryEnterHouse();
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === 'Space') cancelEat();
+        });
+        
+        // Цвета
+        let selectedColor = '#e94560';
+        document.querySelectorAll('.color-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                selectedColor = opt.dataset.color;
+            });
+        });
+        
+        // Подключение
+        document.getElementById('startBtn').addEventListener('click', connect);
+        
+        function connect() {
+            const name = document.getElementById('nameInput').value.trim() || 'Игрок';
+            document.getElementById('playerName').textContent = name;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('statusText').textContent = 'Подключение...';
+            
+            ws = new WebSocket(WS_URL);
+            
+            ws.onopen = () => {
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = 'Онлайн';
+                ws.send(JSON.stringify({
+                    type: 'join',
+                    name: name,
+                    color: selectedColor
+                }));
+            };
+            
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Отключено';
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('startBtn').disabled = false;
+                gameRunning = false;
+            };
+            
+            ws.onerror = (err) => {
+                console.error('WebSocket error:', err);
+                document.getElementById('statusText').textContent = 'Ошибка';
+            };
+        }
+        
+        function handleMessage(msg) {
+            switch(msg.type) {
+                case 'init':
+                    myId = msg.playerId;
+                    houses = msg.houses;
+                    msg.players.forEach(p => players.set(p.id, p));
+                    document.getElementById('loginScreen').style.display = 'none';
+                    gameRunning = true;
+                    lastTime = performance.now();
+                    requestAnimationFrame(gameLoop);
+                    break;
+                    
+                case 'state':
+                    // Интерполяция позиций
+                    msg.players.forEach(p => {
+                        if (p.id === myId) {
+                            // Обновляем свои данные
+                            myRadius = p.radius;
+                            isDead = p.dead;
+                            inHouse = p.inHouse;
+                            eatCooldown = p.cooldown;
+                            eatWindup = p.windup;
+                            updateUI();
+                        } else {
+                            const existing = players.get(p.id);
+                            if (existing) {
+                                // Плавная интерполяция
+                                existing.targetX = p.x;
+                                existing.targetY = p.y;
+                                existing.x += (p.x - existing.x) * 0.3;
+                                existing.y += (p.y - existing.y) * 0.3;
+                                existing.radius = p.radius;
+                                existing.dead = p.dead;
+                                existing.inHouse = p.inHouse;
+                                existing.cooldown = p.cooldown;
+                                existing.windup = p.windup;
+                            } else {
+                                players.set(p.id, p);
+                            }
+                        }
+                    });
+                    break;
+                    
+                case 'player_joined':
+                    players.set(msg.player.id, msg.player);
+                    addKillFeed(`${msg.player.name} присоединился`);
+                    break;
+                    
+                case 'player_left':
+                    players.delete(msg.playerId);
+                    break;
+                    
+                case 'eat_attempt':
+                    // Кто-то пытается нас съесть!
+                    showDanger();
+                    break;
+                    
+                case 'eat_cancelled':
+                    // Отменил
+                    hideDanger();
+                    break;
+                    
+                case 'eaten_by':
+                    isDead = true;
+                    addKillFeed(`Вас съел ${msg.predatorName}!`);
+                    break;
+                    
+                case 'you_ate':
+                    eatCount++;
+                    myRadius = msg.newRadius;
+                    document.getElementById('eatCount').textContent = eatCount;
+                    addKillFeed(`Вы съели ${msg.victimName}!`);
+                    break;
+                    
+                case 'player_eaten':
+                    addKillFeed(`${players.get(msg.predatorId)?.name || '???'} съел ${players.get(msg.victimId)?.name || '???'}`);
+                    break;
+                    
+                case 'respawn':
+                    isDead = false;
+                    document.getElementById('respawnScreen').style.display = 'none';
+                    break;
+                    
+                case 'player_respawned':
+                    const p = players.get(msg.playerId);
+                    if (p) {
+                        p.x = msg.x;
+                        p.y = msg.y;
+                        p.dead = false;
+                    }
+                    break;
+            }
+        }
+        
+        function updateUI() {
+            document.getElementById('sizeDisplay').textContent = Math.round((myRadius / 20) * 100) + '%';
+            
+            const cooldownDiv = document.getElementById('cooldownDisplay');
+            const cooldownTime = document.getElementById('cooldownTime');
+            const eatBtn = document.getElementById('eatBtn');
+            
+            if (eatCooldown > 0) {
+                cooldownDiv.style.display = 'block';
+                cooldownTime.textContent = eatCooldown;
+                eatBtn.classList.add('cooldown');
+                eatBtn.disabled = true;
+                eatBtn.textContent = eatCooldown + 's';
+            } else {
+                cooldownDiv.style.display = 'none';
+                eatBtn.classList.remove('cooldown');
+                eatBtn.disabled = isDead || inHouse !== null;
+                eatBtn.textContent = eatWindup > 0 ? eatWindup + '...' : 'EAT';
+            }
+            
+            if (eatWindup > 0) {
+                eatBtn.classList.add('windup');
+            } else {
+                eatBtn.classList.remove('windup');
+            }
+        }
+        
+        function showDanger() {
+            document.getElementById('dangerScreen').style.display = 'flex';
+            if (dangerTimeout) clearTimeout(dangerTimeout);
+            dangerTimeout = setTimeout(hideDanger, 3500);
+        }
+        
+        function hideDanger() {
+            document.getElementById('dangerScreen').style.display = 'none';
+        }
+        
+        function addKillFeed(text) {
+            const feed = document.getElementById('killFeed');
+            const div = document.createElement('div');
+            div.className = 'kill-message';
+            div.textContent = text;
+            feed.appendChild(div);
+            setTimeout(() => div.remove(), 5000);
+            if (feed.children.length > 5) feed.removeChild(feed.firstChild);
+        }
+        
+        // Джойстик
+        const joystickEl = document.getElementById('joystick');
+        const joystickKnob = document.getElementById('joystickKnob');
+        let joystickCenter = { x: 0, y: 0 };
+        let joystickTouchId = null;
+        
+        joystickEl.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (joystickTouchId !== null) return;
+            const touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+            const rect = joystickEl.getBoundingClientRect();
+            joystickCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+            joystick.active = true;
+            updateJoystick(touch);
+        }, { passive: false });
+        
+        joystickEl.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (joystickTouchId === null) return;
+            for (let t of e.changedTouches) {
+                if (t.identifier === joystickTouchId) {
+                    updateJoystick(t);
+                    break;
+                }
+            }
+        }, { passive: false });
+        
+        joystickEl.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            for (let t of e.changedTouches) {
+                if (t.identifier === joystickTouchId) {
+                    joystickTouchId = null;
+                    joystick.active = false;
+                    joystick.dx = 0;
+                    joystick.dy = 0;
+                    joystickKnob.style.transform = `translate(-50%, -50%)`;
+                    break;
+                }
+            }
+        }, { passive: false });
+        
+        function updateJoystick(touch) {
+            const maxDist = 35;
+            let dx = touch.clientX - joystickCenter.x;
+            let dy = touch.clientY - joystickCenter.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > maxDist) {
+                dx = (dx/dist) * maxDist;
+                dy = (dy/dist) * maxDist;
+            }
+            joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            joystick.dx = dx / maxDist;
+            joystick.dy = dy / maxDist;
+        }
+        
+        // Кнопка еды
+        const eatBtn = document.getElementById('eatBtn');
+        let eatTouchId = null;
+        
+        eatBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (eatTouchId !== null) return;
+            eatTouchId = e.changedTouches[0].identifier;
+            startEat();
+        }, { passive: false });
+        
+        eatBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            for (let t of e.changedTouches) {
+                if (t.identifier === eatTouchId) {
+                    eatTouchId = null;
+                    cancelEat();
+                    break;
+                }
+            }
+        }, { passive: false });
+        
+        function startEat() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (isDead || inHouse !== null) return;
+            ws.send(JSON.stringify({ type: 'eat_start' }));
+        }
+        
+        function cancelEat() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'eat_cancel' }));
+        }
+        
+        function tryEnterHouse() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (isDead) return;
+            
+            // Находим ближайший дом
+            let closest = null;
+            let closestDist = Infinity;
+            houses.forEach((house, idx) => {
+                const dx = (players.get(myId)?.x || 0) - (house.x + HOUSE_SIZE/2);
+                const dy = (players.get(myId)?.y || 0) - (house.y + HOUSE_SIZE/2);
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = idx;
+                }
+            });
+            
+            if (closest !== null && closestDist < 60) {
+                ws.send(JSON.stringify({ type: 'enter_house', houseId: closest }));
+            }
+        }
+        
+        // Игровой цикл
+        function gameLoop(currentTime) {
+            if (!gameRunning) return;
+            
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            // Отправляем движение
+            if (ws && ws.readyState === WebSocket.OPEN && !isDead && inHouse === null) {
+                let dx = 0, dy = 0;
+                
+                if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+                if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+                if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+                if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+                
+                if (joystick.active) {
+                    dx = joystick.dx;
+                    dy = joystick.dy;
+                }
+                
+                if (dx !== 0 || dy !== 0) {
+                    const len = Math.sqrt(dx*dx + dy*dy);
+                    if (len > 1) { dx /= len; dy /= len; }
+                    ws.send(JSON.stringify({
+                        type: 'move',
+                        vx: dx * PLAYER_SPEED,
+                        vy: dy * PLAYER_SPEED
+                    }));
+                } else {
+                    ws.send(JSON.stringify({ type: 'move', vx: 0, vy: 0 }));
+                }
+            }
+            
+            // Обновляем камеру
+            const me = players.get(myId);
+            if (me && !isDead) {
+                camera.x = me.x - canvas.width/2;
+                camera.y = me.y - canvas.height/2;
+                camera.x = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, camera.x));
+                camera.y = Math.max(0, Math.min(WORLD_HEIGHT - canvas.height, camera.y));
+            }
+            
+            // Рендер
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+            
+            // Мир
+            drawWorld();
+            
+            // Дома
+            houses.forEach(house => {
+                ctx.fillStyle = COLORS.house;
+                ctx.fillRect(house.x, house.y, HOUSE_SIZE, HOUSE_SIZE);
+                ctx.fillStyle = COLORS.houseRoof;
+                ctx.beginPath();
+                ctx.moveTo(house.x - 5, house.y);
+                ctx.lineTo(house.x + HOUSE_SIZE/2, house.y - 20);
+                ctx.lineTo(house.x + HOUSE_SIZE + 5, house.y);
+                ctx.fill();
+                ctx.fillStyle = COLORS.houseDoor;
+                ctx.fillRect(house.x + 20, house.y + 30, 20, 30);
+            });
+            
+            // Игроки
+            const allPlayers = Array.from(players.values());
+            allPlayers.sort((a, b) => a.y - b.y);
+            allPlayers.forEach(p => {
+                if (p.dead || p.inHouse !== null) return;
+                drawPlayer(p, p.id === myId);
+            });
+            
+            ctx.restore();
+            
+            // Миникарта
+            drawMinimap();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function drawWorld() {
+            ctx.fillStyle = COLORS.grass;
+            ctx.fillRect(camera.x, camera.y, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = COLORS.grassDark;
+            ctx.lineWidth = 2;
+            const grid = 100;
+            const sx = Math.floor(camera.x/grid)*grid;
+            const sy = Math.floor(camera.y/grid)*grid;
+            
+            ctx.beginPath();
+            for (let x = sx; x < camera.x + canvas.width; x += grid) {
+                ctx.moveTo(x, camera.y);
+                ctx.lineTo(x, camera.y + canvas.height);
+            }
+            for (let y = sy; y < camera.y + canvas.height; y += grid) {
+                ctx.moveTo(camera.x, y);
+                ctx.lineTo(camera.x + canvas.width, y);
+            }
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#e94560';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        }
+        
+        function drawPlayer(p, isMe) {
+            ctx.save();
+            
+            // Тень
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(p.x, p.y + p.radius*0.3, p.radius, p.radius*0.4, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Тело
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Обводка
+            ctx.strokeStyle = isMe ? '#fff' : 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = isMe ? 3 : 2;
+            ctx.stroke();
+            
+            // Глаза
+            let lookX = p.vx || 1;
+            let lookY = p.vy || 0;
+            if (lookX === 0 && lookY === 0) lookX = 1;
+            const angle = Math.atan2(lookY, lookX);
+            const ex = Math.cos(angle) * 3;
+            const ey = Math.sin(angle) * 3;
+            
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(p.x - p.radius*0.3 + ex, p.y - p.radius*0.2 + ey, p.radius*0.25, 0, Math.PI*2);
+            ctx.arc(p.x + p.radius*0.3 + ex, p.y - p.radius*0.2 + ey, p.radius*0.25, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(p.x - p.radius*0.3 + ex*1.5, p.y - p.radius*0.2 + ey*1.5, p.radius*0.12, 0, Math.PI*2);
+            ctx.arc(p.x + p.radius*0.3 + ex*1.5, p.y - p.radius*0.2 + ey*1.5, p.radius*0.12, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Имя
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${Math.max(10, p.radius*0.6)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.strokeText(p.name, p.x, p.y - p.radius - 5);
+            ctx.fillText(p.name, p.x, p.y - p.radius - 5);
+            
+            // Кулдаун индикатор
+            if (p.cooldown > 0) {
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius + 5, 0, Math.PI*2);
+                ctx.stroke();
+            }
+            
+            // Windup индикатор (готовится съесть)
+            if (p.windup > 0) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius + 8, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            ctx.restore();
+        }
+        
+        function drawMinimap() {
+            minimapCtx.fillStyle = '#0f3460';
+            minimapCtx.fillRect(0, 0, 150, 150);
+            
+            const scale = 150 / WORLD_WIDTH;
+            
+            minimapCtx.fillStyle = '#8b4513';
+            houses.forEach(h => {
+                minimapCtx.fillRect(h.x * scale, h.y * scale, 4, 4);
+            });
+            
+            players.forEach(p => {
+                if (p.dead) return;
+                minimapCtx.fillStyle = p.id === myId ? '#fff' : p.color;
+                minimapCtx.beginPath();
+                minimapCtx.arc(p.x * scale, p.y * scale, p.id === myId ? 4 : 3, 0, Math.PI*2);
+                minimapCtx.fill();
+            });
+        }
+        
+        // Пинг каждые 10 сек
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
